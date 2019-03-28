@@ -103,10 +103,12 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# IDEA
 .idea
 *.iml
 *.swp
 
+# Latex
 *.aux
 *.bbl
 *.blg
@@ -114,4 +116,6 @@ venv.bak/
 *.fls
 *.toc
 
+# Data
+data
 
