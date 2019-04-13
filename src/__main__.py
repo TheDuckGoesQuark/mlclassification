@@ -42,14 +42,18 @@ def split_data(input_df, output_df):
                             stratify=output_df)
 
 
-def clean_data(data_to_clean):
+def clean_data(input_df, output_df):
     """Removes any rows with empty or missing values"""
-    data_to_clean.dropna(how='all', inplace=True)
+    all_rows = pd.concat([input_df, output_df], axis=1)
+    all_rows.dropna(how='all', inplace=True)
+    # TODO split all rows back to input cols and output col
+    input_df = all_rows[:, :all_rows.shape[1]]
+    output_df = all_rows[:, all_rows.shape[1]:]
+    return input_df, output_df
 
 
 if __name__ == "__main__":
     args = parse_args()
     inputs, outputs, keys = load_data(args[INPUTS_ARG], args[OUTPUTS_ARG], args[KEYS_ARG])
-    clean_data(inputs)
-    clean_data(outputs)
+    inputs, outputs = clean_data(inputs, outputs)
     x_train, x_test, y_train, y_test = split_data(inputs, outputs)
