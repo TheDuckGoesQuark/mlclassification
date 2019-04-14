@@ -109,7 +109,13 @@ def visualise_signal(input_rows_for_class, output_rows_for_class, class_keys):
 
 def visualise_class_distribution(y_vals, y_keys):
     fig, ax = plt.subplots()
-    y_vals.value_counts().plot(ax=ax, kind='bar')
+    fig.suptitle("Frequency of Each Class in Training Data Set")
+    ax.set_xlabel("Class")
+    ax.set_ylabel("Frequency in Data Set")
+    counts = y_vals.iloc[:, 0].value_counts().to_dict()
+    counts = {y_keys[key]: value for key, value in counts.items()}
+    plt.bar(counts.keys(), counts.values())
+    plt.savefig("frequencies.png")
 
 
 if __name__ == "__main__":
@@ -118,4 +124,4 @@ if __name__ == "__main__":
     inputs, outputs = clean_data(inputs, outputs)
     x_train, x_test, y_train, y_test = split_data(inputs, outputs)
     # visualise_signal(x_train, y_train, keys)
-    visualise_class_distribution(y_train, keys)
+    # visualise_class_distribution(y_train, keys)
