@@ -109,16 +109,34 @@ When originally loading the CSV files the parameter to raise an exception on mis
 
 \section{Data Visualisation and Analysis}
 
-The input CSV was understood to have the structure shown in figure \ref{fig:structure} repeated once for each of the four channels.
+The input CSV was understood to have the structure shown in figure \ref{fig:structure}. Each value is either the mean, minimum, or maximum reading from 100 radar pulses, and these values are referred to as components.
 
 \begin{figure}[!ht]
 	\centering
 	\includegraphics[width=\linewidth]{images/structure}
-	\caption{The structure of each row of the CSV file which is repeated for each channel.}
+	\caption{The structure of each row of the CSV file which is repeated for minimum and maximum values.}
 	\label{fig:structure}
 \end{figure}
 
-% Samples to class ratio, all samples equally represented?
+The mean, min, and max values were plotted for each channel for each sensor. The plots of the means of each channel for the book and plastic case objects are shown in figures \ref{fig:book} and \ref{fig:plasticcase} respectively. The difference between the resulting signals from the two objects are very clear.
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[width=\linewidth]{images/book}
+	\caption{Mean of each channel measured for the book}
+	\label{fig:book}
+\end{figure}
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[width=\linewidth]{images/plasticcase}
+	\caption{Mean of each channel measured for the plastic case}
+	\label{fig:plasticcase}
+\end{figure}
+
+In the binary dataset, the minimum and maximum components observed all followed a similiar shape as the average, but the book class did contain one severe outlier in two plots. The full plots are included in the submission under \url{plots/binarybook.png} and \url{plots/binaryplasticcase}, in which the plot of the minimum components in channel one and the maximum components in channel three both include one row of outliers. Since the average did not deviate from other components for that class, it seemed fair to say that these maximum and minimum readings were outliers. Instead of removing them and risking producing a biased model, the row was left in the data set. The existence of these outliers were noted when choosing a cost function however to try and minimise their affect.
+
+
 
 \subsection{Distributions}
 
@@ -126,11 +144,10 @@ The input CSV was understood to have the structure shown in figure \ref{fig:stru
 
 \section{Feature Selection}
 
-The practical specification mentions that the data was collected in a slightly different way to the RadarCat paper \cite{radarcat}. 
-
-Similiar features
-
 \section{Model Selection and Training}
+
+Since each dataset contains an equal number of samples for each classes, the probability of a random classifier guessing correctly is equal to $$\frac{1}{\textit{Number of Classes}}$$. 
+
 \subsection{Model 1}
 \subsection{Model 2}
 \section{Evaluation and Comparison}
