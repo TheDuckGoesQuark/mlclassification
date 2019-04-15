@@ -4,7 +4,9 @@ import pandas as pd
 import json
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_curve, confusion_matrix
+from sklearn.model_selection import train_test_split, cross_val_predict
 
 from argparse import ArgumentParser
 
@@ -117,16 +119,32 @@ def visualise_class_distribution(y_vals, y_keys):
     plt.savefig("frequencies.png")
 
 
-def visualise_component_distribution(x_vals):
-    # Histogram of distribution of average, max, and mins for each channel
-    pass
-    # hists = x_vals.hist()
-
-
 def normalise_data(x_vals):
     min_val = x_vals.values.min()
     max_val = x_vals.values.max()
     return (x_vals - min_val) / (max_val - min_val)
+
+
+def plot_roc_curve(false_positive_rate, true_positive_rate, label=None):
+    plt.plot(false_positive_rate, true_positive_rate, linewidth=2, label=label)
+    plt.plot([0, 1], [0, 1], 'k--')
+    plt.axis([0, 1, 0, 1])
+    plt.xlabel("False Positive rate")
+    plt.ylabel("True Positive Rate")
+
+
+def apply_model_one(x_train, x_test, y_train, y_test, keys):
+    """Random Forest"""
+    rf_classifier = RandomForestClassifier(random_state=42, criterion="gini")
+    rf_classifier.fit(x_train, y_train.values[:, 0])
+    predicted = rf_classifier.predict(x_test)
+    conf_matrix = confusion_matrix(y_test.values[:, 0], predicted)
+    plt.matshow(conf_matrix, cmap=plt.cm.gray)
+
+
+def apply_model_two(x_train, x_test, y_train, y_test, keys):
+    """LSVC"""
+    pass
 
 
 if __name__ == "__main__":
@@ -137,4 +155,5 @@ if __name__ == "__main__":
     # visualise_signal(x_train, y_train, keys)
     # visualise_class_distribution(y_train, keys)
     x_train = normalise_data(x_train)
-    visualise_component_distribution(x_train)
+    apply_model_one(x_train, x_test, y_train, y_test, keys)
+    apply_model_two(x_train, x_test, y_train, y_test, keys)

@@ -182,19 +182,25 @@ Another method is called the one-vs-one classifier, where a classifier exists fo
 
 There also exist dedicated multiclass classifiers with different advantages and implementations.
 
-Since the RadarCat \cite{radarcat} technology is intended to be included with mobile phones to allow users to identify and catalogue vast numbers of every day objects, these implementations could end up requiring an incredibly large number of classifiers. Therefore it would be logical to use a classifier that scaled better. The Soli \cite{soli} technology used by RadarCat was designed with the intention of recognising hand gestures, and would so being able to generalise would likely be favoured in that case (i.e. handling many variations of the same hand gesture).
+Since the RadarCat \cite{radarcat} technology is intended to be able to allow users to identify and catalogue various every day objects, both the one-vs-one and one-vs-all approaches would involve a large number of classifiers being trained. Therefore an approach that required fewer classifiers would probably be preferred. 
 
-Another possible solution is to create a hierarchy of classifiers. Each node has an "is-a" relationship with its parent in the tree, and prediction involves starting with a very generic classifier, and gradually getting more specific. \cite{heirarchy} for example used such classifier to identify the musical genre of an audio clip using a heirachical structure. Though it performed similiarly to a flat classifier approach, it would be easier to include new classes. This would be useful for the RadarCat use case as the number of objects it is used to identify grows.
+On the other hand, the Soli \cite{soli} technology used by RadarCat was designed with the intention of recognising hand gestures, and would so being able to generalise well with fewer classes would likely be favoured in that case (i.e. handling many variations of the same hand gesture).
 
-Online learning would also be useful, as user feedback could provide a method for crowdsourcing samples for further supervised learning. Crowdsourced data collection for producing data for supervised learning has famously been applied by projects such as reCAPTCHA \cite{captcha}.
+Another possible solution that could reduce the number of classifiers needed as the number of classes grow is to create a hierarchy of classifiers. Each node has an "is-a" relationship with its parent in the tree, and prediction involves starting with a very generic classifier, and gradually getting more specific. \cite{heirarchy} for example used such classifier to identify the musical genre of an audio clip using a heirachical structure. Though it performed similiarly to a flat classifier approach, it would be easier to include new classes. This would be useful for the RadarCat use case as the number of objects it is used to identify grows.
 
-With the previous information in mind and for the sake of evaluation and comparison, an inherently multiclass method (Random Forest) and a one-vs-all method (Linear Support Vector Classification) were chosen for the first and second models respectively.
+The ability to provide online learning (or at least batch learning) would also be useful, as user feedback could provide a method for crowdsourcing samples for further supervised learning. Crowdsourced data collection for producing data for supervised learning has famously been applied by projects such as reCAPTCHA \cite{captcha}, and a similiar method could be used by RadarCat to improve its error rate.
 
-\subsection{Model 1}
+With the previous information in mind (and for the sake of evaluation and comparison), an inherently multiclass method (Random Forest) and a one-vs-all method (Linear Support Vector Classification) were chosen for the first and second models respectively. 
+
+\subsection{Model 1: Random Forest Classifier}
+
+The random forest classifier was chosen due to its robustness when dealing with noisy data, which would definitely be present in real world applications \cite{rf}. The number of classifiers would remain static as the number of classes grow, though training would be slower, especially due to the high number of dimensions.
 
 
-\subsection{Model 2}
 
+\subsection{Model 2: Linear Support Vector Classifier}
+
+The one-vs-all LSVC was chosen as it scales well as the number of samples increases.
 
 \section{Evaluation and Comparison}
 \section{Discussion}
