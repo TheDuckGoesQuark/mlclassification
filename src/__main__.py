@@ -75,7 +75,7 @@ def plot_class_scatter(rows_of_class, class_name, max_value, min_value):
             if channel_idx == 0:
                 plot.set_ylabel("{} of 100 pulses".format(function_name))
 
-            plot.set_ylim((min_value, max_value))
+            # plot.set_ylim((min_value, max_value))
             function_to_channel_plots[function_name].append(plot)
             n_plots += 1
 
@@ -117,6 +117,19 @@ def visualise_class_distribution(y_vals, y_keys):
     plt.bar(counts.keys(), counts.values())
     plt.savefig("frequencies.png")
 
+def visualise_global_maximums(x_vals, y_vals ,y_keys):
+    all_rows = pd.merge(x_vals, y_vals, left_index=True, right_index=True)
+    all_maximums = all_rows.iloc[:, 256*2:]
+    print(all_maximums.shape)
+    # Find global maximum for each channel for each sample
+    # Plot each global maximum for each channel on separate plot, with different colour for each class
+    pass
+
+
+def pca(input_data, output_data):
+    input_centered = input_data - input_data.mean(axis=0)
+    U, s, V = np.linalg.svd(input_centered)
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -125,3 +138,5 @@ if __name__ == "__main__":
     x_train, x_test, y_train, y_test = split_data(inputs, outputs)
     # visualise_signal(x_train, y_train, keys)
     # visualise_class_distribution(y_train, keys)
+    visualise_global_maximums(x_train, y_train, keys)
+

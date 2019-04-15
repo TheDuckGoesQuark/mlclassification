@@ -107,7 +107,7 @@ When originally loading the CSV files the parameter to raise an exception on mis
 
 \section{Data Visualisation and Analysis}
 
-The input CSV was understood to have the structure shown in figure \ref{fig:structure}. Each value is either the mean, minimum, or maximum reading from 100 radar pulses, and these values are referred to as components.
+The input CSV was understood to have the structure shown in figure \ref{fig:structure}. Each value is either the mean, minimum, or maximum reading from 100 radar pulses for a single component of a channel. Each channel is comprised of 256 components.
 
 \begin{figure}[!ht]
 	\centering
@@ -132,9 +132,12 @@ The mean, min, and max values were plotted for each channel for each sensor. The
 	\label{fig:plasticcase}
 \end{figure}
 
-In the binary dataset, the minimum and maximum components observed all followed a similiar shape as the average, but the book class did contain one severe outlier in two plots. The full plots are included in the submission under \url{plots/binarybook.png} and \url{plots/binaryplasticcase}, in which the plot of the minimum components in channel one and the maximum components in channel three both include one row of outliers. Since the average did not deviate from other components for that class, it seemed fair to say that these maximum and minimum readings were outliers. Instead of removing them and risking producing a biased model, the row was left in the data set. Since in a real world application of such a sensor would likely involve noise, it made sense to train the model to be able to handle such anomalies. The existence of these outliers was however noted when choosing a cost function however in order to try and minimise their affect.
+In the binary dataset, the minimum and maximum components observed all followed a similiar shape as the average, but the book class did contain one severe outlier in two plots. The full plots are included in the submission under \url{plots/binarybook.png} and \url{plots/binaryplasticcase}, in which the plot of the minimum components in channel one and the maximum components in channel three both include one row of outliers. 
+Since the average did not deviate from other components for that class, it seemed fair to say that these maximum and minimum readings were outliers. Instead of removing them and risking producing a biased model, the row was left in the data set. A real world application of the sensor would likely involve noise, and so it made sense to train the model to be able to cope with anomalies. The existence of these outliers was however noted when choosing a cost function however in order to try and minimise their affect.
 
 The same plots were made for the multiclass dataset, and from this it was clear that each material produced very different results, with varying levels of consistency. For example, the data aquired when the radar sensor was applied to a human hand varied wildly, whilst the readings for the plastic cover were a very clear sinusoidal shape. These plots can be found in \url{plots/multiclass*}.
+
+Since the radar signature was determined by the reflection of the radar pulses on the surface and interior structure of each object, the resulting plots were understandable. For example, the plastic case shows a very consistent pattern likely due to the fact that it is composed of a single material in a uniform structure, whilst the human hand produces a very chaotic signature since it is composed of many different materials, especially fluids in motion.
 
 \begin{figure}
 \centering
@@ -156,16 +159,41 @@ The same plots were made for the multiclass dataset, and from this it was clear 
 
 The training data set was shown not be skewed by plotting the distribution of each class (figure\ref{fig:classdist}). The equal distribution of each class meant that cross validation of a classifier that always guesses the same class will have a ratio of correct predictions inversely proportional to number of classes in the training data set. 
 
+The root mean squared (RMS) value for each channel individual as well as the global RMS value was calculated and also included as a feature. RMS represents the average amplitude of a waveform. For example, the UK uses alternating current, with an RMS of 240V, which means it produces the same average power as 240 volts of DC.
+
 \section{Feature Selection}
 
-From the plots of samples ov
+The large number of features available in the dataset makes computation of any model especially expensive. In order to have an effective classifier, there should be at least five examples of each combination of values in the training data \cite{mincombs}, which our dataset is unable to provide. Therefore a reduction of the feature set was considered.
+
+The visualisations of the training data showed that each class had very different levels of variation between each sample, and this variation could be used to identify a class. Since our model would need to identify the class based on a single sample, this variation could not be relied on. 
 
 \section{Model Selection and Training}
 
-Since each dataset contains an equal number of samples for each classes, the probability of a random classifier guessing correctly is equal to . 
+Multiclass classifcation can be implemented using binary classifiers by training an individual classifier for each class, and each classifier is only able to state if the input represents its class or not. Since the training data used has an equal distribution of each class, each classifier would be trained on skewed data with far more negatives than positives as demonstrated in figure \ref{fig:classifierperclass}. This method would require as many classifiers as there are classes, and is referred to as the one-vs-rest method \cite{handson}.
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[width=0.5\linewidth]{images/classifierperclass}
+	\caption{Distribution of negative and positive samples for a classifier trained to identify either class '3' or 'not 3' when each class is equally represented}
+	\label{fig:classifierperclass}
+\end{figure}
+
+Another method is called the one-vs-one classifier, where a classifier exists for each pair of classes. Each classifier will predict a value from the two classes it was trained to identify, and the resulting prediction will be the class that was chosen by the most classifiers. This method requires $n (n - 1)^2$ classifiers, where n is the number of classes.
+
+There also exist dedicated multiclass classifiers with different advantages and implementations.
+
+Since the RadarCat \cite{radarcat} technology is intended to be included with mobile phones to allow users to identify and catalogue vast numbers of every day objects, these implementations could end up requiring an incredibly large number of classifiers. Therefore it would be logical to use a classifier that scaled better. The Soli \cite{soli} technology used by RadarCat was designed with the intention of recognising hand gestures, and would so precision would likely be favoured in that case.
+
+Another possible solution is to create a hierarchy of classifiers. Each node has an "is-a" relationship with its parent in the tree, and prediction involves starting with a very generic classifier, and gradually getting more specific. \cite{heirarchy} for example used such classifier to identify the musical genre of an audio clip using a heirachical structure. Though it performed similiarly to a flat classifier approach, it would be easier to include new classes. This would be useful for the RadarCat use case as the number of objects it is used to identify grows.
+
+A classifier capabable of online learning would be very useful, as user feedback could provide a method for crowdsourcing samples for further supervised learning. Crowdsourced data collection for producing data for supervised learning has famously been applied by projects such as reCAPTCHA \cite{captcha}.
 
 \subsection{Model 1}
+
+
 \subsection{Model 2}
+
+
 \section{Evaluation and Comparison}
 \section{Discussion}
 
