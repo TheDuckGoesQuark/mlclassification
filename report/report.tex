@@ -159,7 +159,7 @@ Since the radar signature was determined by the reflection of the radar pulses o
 
 The training data set was shown not be skewed by plotting the distribution of each class (figure\ref{fig:classdist}). The equal distribution of each class meant that cross validation of a classifier that always guesses the same class will have a ratio of correct predictions inversely proportional to number of classes in the training data set. 
 
-The root mean squared (RMS) value for each channel individual as well as the global RMS value was calculated and also included as a feature. RMS represents the average amplitude of a waveform. For example, the UK uses alternating current, with an RMS of 240V, which means it produces the same average power as 240 volts of DC.
+All data from the feature set had values between -1 and 1, and from the plots of all classes it was noticed that the different classes had different global minumum and maximums for each channel. For example, the components of samples for air did not surpass 0.1, 0.25 for books, 0.5 for plastic case, and 0.75 to 1 for hand and knife. Based on this normalisation was used over standardisation, as there were no outliers and the values were fairly evenly distributed. Plotting the normalised data and comparing it to the plots of the original data reinforced this decision, as the shape and scale of the resulting plots had bbeen maintained.
 
 \section{Feature Selection}
 
@@ -169,7 +169,7 @@ The visualisations of the training data showed that each class had very differen
 
 \section{Model Selection and Training}
 
-Multiclass classifcation can be implemented using binary classifiers by training an individual classifier for each class, and each classifier is only able to state if the input represents its class or not. Since the training data used has an equal distribution of each class, each classifier would be trained on skewed data with far more negatives than positives as demonstrated in figure \ref{fig:classifierperclass}. This method would require as many classifiers as there are classes, and is referred to as the one-vs-rest method \cite{handson}.
+Multiclass classifcation can be implemented using binary classifiers by training an individual classifier for each class, and each classifier is only able to state if the input represents its class or not. Since the training data used has an equal distribution of each class, each classifier would be trained on skewed data with far more negatives than positives as demonstrated in figure \ref{fig:classifierperclass}. This method would require as many classifiers as there are classes, and is referred to as the one-vs-all method \cite{handson}.
 
 \begin{figure}[!ht]
 	\centering
@@ -182,11 +182,13 @@ Another method is called the one-vs-one classifier, where a classifier exists fo
 
 There also exist dedicated multiclass classifiers with different advantages and implementations.
 
-Since the RadarCat \cite{radarcat} technology is intended to be included with mobile phones to allow users to identify and catalogue vast numbers of every day objects, these implementations could end up requiring an incredibly large number of classifiers. Therefore it would be logical to use a classifier that scaled better. The Soli \cite{soli} technology used by RadarCat was designed with the intention of recognising hand gestures, and would so precision would likely be favoured in that case.
+Since the RadarCat \cite{radarcat} technology is intended to be included with mobile phones to allow users to identify and catalogue vast numbers of every day objects, these implementations could end up requiring an incredibly large number of classifiers. Therefore it would be logical to use a classifier that scaled better. The Soli \cite{soli} technology used by RadarCat was designed with the intention of recognising hand gestures, and would so being able to generalise would likely be favoured in that case (i.e. handling many variations of the same hand gesture).
 
 Another possible solution is to create a hierarchy of classifiers. Each node has an "is-a" relationship with its parent in the tree, and prediction involves starting with a very generic classifier, and gradually getting more specific. \cite{heirarchy} for example used such classifier to identify the musical genre of an audio clip using a heirachical structure. Though it performed similiarly to a flat classifier approach, it would be easier to include new classes. This would be useful for the RadarCat use case as the number of objects it is used to identify grows.
 
-A classifier capabable of online learning would be very useful, as user feedback could provide a method for crowdsourcing samples for further supervised learning. Crowdsourced data collection for producing data for supervised learning has famously been applied by projects such as reCAPTCHA \cite{captcha}.
+Online learning would also be useful, as user feedback could provide a method for crowdsourcing samples for further supervised learning. Crowdsourced data collection for producing data for supervised learning has famously been applied by projects such as reCAPTCHA \cite{captcha}.
+
+With the previous information in mind and for the sake of evaluation and comparison, an inherently multiclass method (Random Forest) and a one-vs-all method (Linear Support Vector Classification) were chosen for the first and second models respectively.
 
 \subsection{Model 1}
 

@@ -1,8 +1,7 @@
-from typing import Dict, Tuple
+from typing import Dict
 
 import pandas as pd
 import json
-import wave
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
@@ -75,7 +74,7 @@ def plot_class_scatter(rows_of_class, class_name, max_value, min_value):
             if channel_idx == 0:
                 plot.set_ylabel("{} of 100 pulses".format(function_name))
 
-            # plot.set_ylim((min_value, max_value))
+            plot.set_ylim((min_value, max_value))
             function_to_channel_plots[function_name].append(plot)
             n_plots += 1
 
@@ -88,7 +87,7 @@ def plot_class_scatter(rows_of_class, class_name, max_value, min_value):
                 start = (function_idx * components_per_function) + (channel_idx * components_per_channel)
                 end = start + components_per_channel
                 y = row[start:end]
-                channel_plot.scatter(x, y)
+                channel_plot.scatter(x, y, alpha=0.8)
 
     plt.savefig("{}.png".format(class_name))
 
@@ -117,18 +116,17 @@ def visualise_class_distribution(y_vals, y_keys):
     plt.bar(counts.keys(), counts.values())
     plt.savefig("frequencies.png")
 
-def visualise_global_maximums(x_vals, y_vals ,y_keys):
-    all_rows = pd.merge(x_vals, y_vals, left_index=True, right_index=True)
-    all_maximums = all_rows.iloc[:, 256*2:]
-    print(all_maximums.shape)
-    # Find global maximum for each channel for each sample
-    # Plot each global maximum for each channel on separate plot, with different colour for each class
+
+def visualise_component_distribution(x_vals):
+    # Histogram of distribution of average, max, and mins for each channel
     pass
+    # hists = x_vals.hist()
 
 
-def pca(input_data, output_data):
-    input_centered = input_data - input_data.mean(axis=0)
-    U, s, V = np.linalg.svd(input_centered)
+def normalise_data(x_vals):
+    min_val = x_vals.values.min()
+    max_val = x_vals.values.max()
+    return (x_vals - min_val) / (max_val - min_val)
 
 
 if __name__ == "__main__":
@@ -138,5 +136,5 @@ if __name__ == "__main__":
     x_train, x_test, y_train, y_test = split_data(inputs, outputs)
     # visualise_signal(x_train, y_train, keys)
     # visualise_class_distribution(y_train, keys)
-    visualise_global_maximums(x_train, y_train, keys)
-
+    x_train = normalise_data(x_train)
+    visualise_component_distribution(x_train)
