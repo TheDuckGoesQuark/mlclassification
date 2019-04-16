@@ -8,13 +8,15 @@ import seaborn as sns
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
-from sklearn.linear_model import SGDClassifier
+from sklearn.linear_model import SGDClassifier, LogisticRegression
 from sklearn.metrics import roc_curve, confusion_matrix, accuracy_score, classification_report
 from sklearn.model_selection import train_test_split, cross_val_predict
 
 from argparse import ArgumentParser
 
 from sklearn.multiclass import OneVsRestClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import MinMaxScaler
 
 INPUTS_ARG = "inputs"
 OUTPUTS_ARG = "outputs"
@@ -125,12 +127,6 @@ def visualise_class_distribution(y_vals, y_keys):
     plt.savefig("frequencies.png")
 
 
-def normalise_data(x_vals):
-    min_val = x_vals.values.min()
-    max_val = x_vals.values.max()
-    return (x_vals - min_val) / (max_val - min_val)
-
-
 def plot_roc_curve(false_positive_rate, true_positive_rate, label=None):
     plt.plot(false_positive_rate, true_positive_rate, linewidth=2, label=label)
     plt.plot([0, 1], [0, 1], 'k--')
@@ -141,7 +137,7 @@ def plot_roc_curve(false_positive_rate, true_positive_rate, label=None):
 
 def apply_model_one(training_input, testing_input, training_output, testing_output, keys):
     """Random Forest"""
-    rf_classifier = RandomForestClassifier(random_state=42, n_estimators=20)
+    rf_classifier = RandomForestClassifier(random_state=42)
     rf_classifier.fit(training_input, training_output.values[:, 0])
     predicted = rf_classifier.predict(testing_input)
     evaluate(predicted, testing_output.values[:, 0])
@@ -215,22 +211,33 @@ if __name__ == "__main__":
     inputs, outputs = clean_data(inputs, outputs)
     x_train, x_test, y_train, y_test = split_data(inputs, outputs)
 
+    # Numpy arrays are easily to deal with...
+    y_train = y_train.iloc[:, 0]
+    y_test = y_test.iloc[:, 0]
+
     # Visualising data
     # visualise_signal(x_train, y_train, keys)
     # visualise_class_distribution(y_train, keys)
+
     # Drop everything but averages
     x_train = x_train.iloc[:, 0:256]
-    x_test = x_train.iloc[:, 0:256]
-    x_train = normalise_data(x_train)
+    x_test = x_test.iloc[:, 0:256]
 
     # PCA Examples
     # plot_2d_pca(x_train, y_train, keys)
     # plot_explained_variance(x_train)
-    # PCA Used
-    pca = PCA(n_components=0.95, random_state=42)
-    x_train_reduced = pca.fit_transform(x_train)
-    x_test_reduced = pca.transform(x_test)
 
-    # Apply models
-    apply_model_one(x_train_reduced, x_test_reduced, y_train, y_test, keys)
-    apply_model_two(x_train_reduced, x_test_reduced, y_train, y_test, keys)
+    pipeline = Pipeline([
+        ('scalar', MinMaxScaler()),
+        ('pca', PCA(n_components=0.95, random_state=42)),
+        ('clf', RandomForestClassifier(random_state=42))
+    ])
+
+    pipeline.fit(x_train, y_train)
+    predicted = pipeline.predict(x_test)
+    print("Accuracy: {}".format(accuracy_score(y_test, predicted)))
+    print(classification_report(y_test, predicted))
+    conf_matrix = confusion_matrix(y_test, predicted)
+    print(conf_matrix)
+    plt.matshow(conf_matrix, cmap=plt.cm.gray)
+
