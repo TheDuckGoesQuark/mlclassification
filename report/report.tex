@@ -159,17 +159,42 @@ Since the radar signature was determined by the reflection of the radar pulses o
 
 The training data set was shown not be skewed by plotting the distribution of each class (figure\ref{fig:classdist}). The equal distribution of each class meant that cross validation of a classifier that always guesses the same class will have a ratio of correct predictions inversely proportional to number of classes in the training data set. 
 
-All data from the feature set had values between -1 and 1, and from the plots of all classes it was noticed that the different classes had different global minumum and maximums for each channel. For example, the components of samples for air did not surpass 0.1, 0.25 for books, 0.5 for plastic case, and 0.75 to 1 for hand and knife. Based on this normalisation was used over standardisation, as there were no outliers and the values were fairly evenly distributed. Plotting the normalised data and comparing it to the plots of the original data reinforced this decision, as the shape and scale of the resulting plots had bbeen maintained.
+All data from the feature set had values between -1 and 1, and from the plots of all classes it was noticed that the different classes had different global minumum and maximums for each channel. For example, the components of samples for air did not surpass 0.1, 0.25 for books, 0.5 for plastic case, and 0.75 to 1 for hand and knife. Based on this and the fact that there were no outliers and the values were evenly distributed, normalisation was used over standardisation. Plotting the normalised data and comparing it to the plots of the original data reinforced this decision, as the shape and scale of the resulting plots had been maintained.
 
 \section{Feature Selection}
 
-The large number of features available in the dataset makes computation of any model especially expensive. In order to have an effective classifier, there should be at least five examples of each combination of values in the training data \cite{mincombs}, which our dataset is unable to provide. Therefore a reduction of the feature set was considered.
+The large number of features available in the dataset makes computation of any model more expensive. In order to have an effective classifier, there should be at least five examples of each combination of values from each feature in the training data \cite{mincombs}, which our dataset is unable to provide. Therefore a reduction of the feature set was considered necessary.
 
-The visualisations of the training data showed that each class had very different levels of variation between each sample, and this variation could be used to identify a class. Since our model would need to identify the class based on a single sample, this variation could not be relied on. 
+The visualisations of the training data showed that each class had very different levels of variation between each sample, and this variation could be used to identify a class. However our model would need to identify the class based on a single sample, and so this variation could not be relied on. 
+
+It was observed that the plots of each channel for the mean, minumum, and average were very similiar for each sample within a class. For this reason, all components were dropped except those based on the average of 100 pulses. 
+
+Principal component analysis (PCA) was then used to further reduce the number of features. PCA works by projecting the data onto the hyperplane that retains the most of the original variance in the dataset. By producing vectors that map and combine the original features to another set, PCA concentrates as much information into the first principle component, and then as much of whatever remains into the second component, and so on. Since the mapping combines features, the resulting components do not have any real meaning, though the original data can be recovered from the resulting principal components.
+
+Initially, to try and understand PCA a plot of the first two principals components was produced (Figure \ref{fig:pca1}. The first two principal components alone accounted for 82\% of the original variance.
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[width=0.8\linewidth]{images/2dpca}
+	\caption{The first two principal components, coloured according to their class.}
+	\label{fig:pca1}
+\end{figure}
+
+To show how variance changes as the number of principal components increases, the explained variance ratios were also plotted against the number of dimensions in figure \ref{fig:explainedvariance}. The return on increasing dimensions becomes miniscule after 20 dimensions.
+For the actual model, the PCA was configured to select the number of components that would retain 95\% of the original variance. This reduced the feature set from 256 to 6.
+
+\begin{figure}[!ht]
+	\centering
+	\includegraphics[width=0.8\linewidth]{images/explainedvariance}
+	\caption{The elbow curve of explained variance that results from increasing the number of dimensions.}
+	\label{fig:explainedvariance}
+\end{figure}
+
+The PCA used method requires loading the entire dataset into memory. Alternative methods exists such as incremental PCA and random PCA that can be used for online and batched learning.
 
 \section{Model Selection and Training}
 
-Multiclass classifcation can be implemented using binary classifiers by training an individual classifier for each class, and each classifier is only able to state if the input represents its class or not. Since the training data used has an equal distribution of each class, each classifier would be trained on skewed data with far more negatives than positives as demonstrated in figure \ref{fig:classifierperclass}. This method would require as many classifiers as there are classes, and is referred to as the one-vs-all method \cite{handson}.
+Multiclass classifcation can be implemented using binary classifiers through two methods, one-vs-one and one-vs-all. One-vs-all involves training an individual classifier per class, and each classifier is only able to state if the input represents its class or not. Since the training data used has an equal distribution of each class, each classifier would be trained on skewed data with far more negatives than positives as demonstrated in figure \ref{fig:classifierperclass}. This method would require as many classifiers as there are classes \cite{handson}.
 
 \begin{figure}[!ht]
 	\centering
@@ -178,29 +203,27 @@ Multiclass classifcation can be implemented using binary classifiers by training
 	\label{fig:classifierperclass}
 \end{figure}
 
-Another method is called the one-vs-one classifier, where a classifier exists for each pair of classes. Each classifier will predict a value from the two classes it was trained to identify, and the resulting prediction will be the class that was chosen by the most classifiers. This method requires $n (n - 1)^2$ classifiers, where n is the number of classes.
+A one-vs-one classifier requires a classifier exists for each pair of classes. Each classifier will predict a value from the two classes it was trained to identify, and the resulting prediction will be the class that was chosen by the most classifiers. This method requires $n (n - 1)^2$ classifiers, where n is the number of classes.
 
 There also exist dedicated multiclass classifiers with different advantages and implementations.
 
 Since the RadarCat \cite{radarcat} technology is intended to be able to allow users to identify and catalogue various every day objects, both the one-vs-one and one-vs-all approaches would involve a large number of classifiers being trained. Therefore an approach that required fewer classifiers would probably be preferred. 
 
-On the other hand, the Soli \cite{soli} technology used by RadarCat was designed with the intention of recognising hand gestures, and would so being able to generalise well with fewer classes would likely be favoured in that case (i.e. handling many variations of the same hand gesture).
+On the other hand, the Soli \cite{soli} technology used by RadarCat was designed with the intention of recognising hand gestures, and so being able to generalise well when trained on fewer classes would likely be favoured in that case (i.e. handling many variations of the same hand gesture).
 
 Another possible solution that could reduce the number of classifiers needed as the number of classes grow is to create a hierarchy of classifiers. Each node has an "is-a" relationship with its parent in the tree, and prediction involves starting with a very generic classifier, and gradually getting more specific. \cite{heirarchy} for example used such classifier to identify the musical genre of an audio clip using a heirachical structure. Though it performed similiarly to a flat classifier approach, it would be easier to include new classes. This would be useful for the RadarCat use case as the number of objects it is used to identify grows.
 
 The ability to provide online learning (or at least batch learning) would also be useful, as user feedback could provide a method for crowdsourcing samples for further supervised learning. Crowdsourced data collection for producing data for supervised learning has famously been applied by projects such as reCAPTCHA \cite{captcha}, and a similiar method could be used by RadarCat to improve its error rate.
 
-With the previous information in mind (and for the sake of evaluation and comparison), an inherently multiclass method (Random Forest) and a one-vs-all method (Linear Support Vector Classification) were chosen for the first and second models respectively. 
+With the previous information in mind (and for the sake of evaluation and comparison), an inherently multiclass method (Random Forest) and a one-vs-all method (Linear Support Vector Machine) were chosen for the first and second models respectively. 
 
 \subsection{Model 1: Random Forest Classifier}
 
-The random forest classifier was chosen due to its robustness when dealing with noisy data, which would definitely be present in real world applications \cite{rf}. The number of classifiers would remain static as the number of classes grow, though training would be slower, especially due to the high number of dimensions.
+The random forest classifier was chosen due to its robustness when dealing with noisy data, which would definitely be present in real world applications \cite{rf}. The number of classifiers would not grow with the number of classes, though training would be slower. Especially so in this case due to the high number of dimensions involved.
 
+\subsection{Model 2: Linear Support Vector Machine}
 
-
-\subsection{Model 2: Linear Support Vector Classifier}
-
-The one-vs-all LSVC was chosen as it scales well as the number of samples increases.
+One-vs-all was implemented using SGDClassifier 
 
 \section{Evaluation and Comparison}
 \section{Discussion}

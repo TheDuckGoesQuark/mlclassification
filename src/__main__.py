@@ -4,11 +4,17 @@ import pandas as pd
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import roc_curve, confusion_matrix
+from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
+from sklearn.linear_model import SGDClassifier
+from sklearn.metrics import roc_curve, confusion_matrix, accuracy_score, classification_report
 from sklearn.model_selection import train_test_split, cross_val_predict
 
 from argparse import ArgumentParser
+
+from sklearn.multiclass import OneVsRestClassifier
 
 INPUTS_ARG = "inputs"
 OUTPUTS_ARG = "outputs"
@@ -133,27 +139,98 @@ def plot_roc_curve(false_positive_rate, true_positive_rate, label=None):
     plt.ylabel("True Positive Rate")
 
 
-def apply_model_one(x_train, x_test, y_train, y_test, keys):
+def apply_model_one(training_input, testing_input, training_output, testing_output, keys):
     """Random Forest"""
-    rf_classifier = RandomForestClassifier(random_state=42, criterion="gini")
-    rf_classifier.fit(x_train, y_train.values[:, 0])
-    predicted = rf_classifier.predict(x_test)
-    conf_matrix = confusion_matrix(y_test.values[:, 0], predicted)
+    rf_classifier = RandomForestClassifier(random_state=42, n_estimators=20)
+    rf_classifier.fit(training_input, training_output.values[:, 0])
+    predicted = rf_classifier.predict(testing_input)
+    evaluate(predicted, testing_output.values[:, 0])
+
+
+def apply_model_two(training_input, testing_input, training_output, testing_output, keys):
+    sgd_classifier = OneVsRestClassifier(SGDClassifier(random_state=42))
+    sgd_classifier.fit(training_input, training_output.values[:, 0])
+    predicted = sgd_classifier.predict(testing_input)
+    evaluate(predicted, testing_output.values[:, 0])
+
+
+def evaluate(predicted, actual):
+    print("Accuracy: {}".format(accuracy_score(actual, predicted)))
+    print(classification_report(actual, predicted))
+    conf_matrix = confusion_matrix(actual, predicted)
+    print(conf_matrix)
     plt.matshow(conf_matrix, cmap=plt.cm.gray)
 
 
-def apply_model_two(x_train, x_test, y_train, y_test, keys):
-    """LSVC"""
-    pass
+def plot_2d_pca(training_input, training_output, output_keys):
+    pca = PCA(n_components=2)
+    principal_components = pca.fit_transform(training_input)
+    principal_df = pd.DataFrame(data=principal_components, columns=['PC 1', 'PC 2'])
+    all_rows = pd.merge(principal_df, training_output, left_index=True, right_index=True)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Principal Component 1')
+    ax.set_ylabel('Principal Component 2')
+    ax.set_title('2 Component PCA')
+
+    colours = iter(plt.cm.rainbow(np.linspace(0, 0.9, len(output_keys))))
+    for target in output_keys:
+        # Get indices of all rows for that class
+        indices_of_class = all_rows.index[all_rows.iloc[:, -1] == target]
+        ax.scatter(all_rows.loc[indices_of_class, 'PC 1']
+                   , all_rows.loc[indices_of_class, 'PC 2']
+                   , c=next(colours)
+                   , s=50)
+
+    ax.legend(output_keys.values())
+    ax.grid()
+    plt.savefig("2dpca.png")
+    print(pca.explained_variance_ratio_)
+
+
+def plot_explained_variance(training_input):
+    example_pca = PCA(n_components=0.9999999)
+    example_pca.fit_transform(training_input)
+
+    cumsum = np.cumsum(example_pca.explained_variance_ratio_)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    ax.set_xlabel('Dimensions')
+    ax.set_ylabel('Explained Variance')
+    ax.set_title('Explained Variance with Increasing Dimensions')
+    ax.plot(cumsum)
+    threshold = 0.95
+    ax.axhline(threshold, linestyle="--", color="black")
+
+    plt.savefig("explainedvariance.png")
 
 
 if __name__ == "__main__":
+    # Loading Data
     args = parse_args()
     inputs, outputs, keys = load_data(args[INPUTS_ARG], args[OUTPUTS_ARG], args[KEYS_ARG])
+    # Cleaning and preparing data
     inputs, outputs = clean_data(inputs, outputs)
     x_train, x_test, y_train, y_test = split_data(inputs, outputs)
+
+    # Visualising data
     # visualise_signal(x_train, y_train, keys)
     # visualise_class_distribution(y_train, keys)
+    # Drop everything but averages
+    x_train = x_train.iloc[:, 0:256]
+    x_test = x_train.iloc[:, 0:256]
     x_train = normalise_data(x_train)
-    apply_model_one(x_train, x_test, y_train, y_test, keys)
-    apply_model_two(x_train, x_test, y_train, y_test, keys)
+
+    # PCA Examples
+    # plot_2d_pca(x_train, y_train, keys)
+    # plot_explained_variance(x_train)
+    # PCA Used
+    pca = PCA(n_components=0.95, random_state=42)
+    x_train_reduced = pca.fit_transform(x_train)
+    x_test_reduced = pca.transform(x_test)
+
+    # Apply models
+    apply_model_one(x_train_reduced, x_test_reduced, y_train, y_test, keys)
+    apply_model_two(x_train_reduced, x_test_reduced, y_train, y_test, keys)
