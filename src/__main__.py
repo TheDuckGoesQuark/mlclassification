@@ -7,14 +7,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import mutual_info_regression, mutual_info_classif
-from sklearn.linear_model import SGDClassifier, LogisticRegression
-from sklearn.metrics import roc_curve, confusion_matrix, accuracy_score, classification_report
-from sklearn.model_selection import train_test_split, cross_val_predict
+from sklearn.linear_model import SGDClassifier
+from sklearn.metrics import roc_curve, confusion_matrix, accuracy_score, classification_report, precision_recall_curve
+from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, GridSearchCV, \
+    RandomizedSearchCV
 
 from argparse import ArgumentParser
 
-from sklearn.multiclass import OneVsRestClassifier
+from sklearn.multiclass import OneVsRestClassifier, OneVsOneClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
@@ -127,37 +127,6 @@ def visualise_class_distribution(y_vals, y_keys):
     plt.savefig("frequencies.png")
 
 
-def plot_roc_curve(false_positive_rate, true_positive_rate, label=None):
-    plt.plot(false_positive_rate, true_positive_rate, linewidth=2, label=label)
-    plt.plot([0, 1], [0, 1], 'k--')
-    plt.axis([0, 1, 0, 1])
-    plt.xlabel("False Positive rate")
-    plt.ylabel("True Positive Rate")
-
-
-def apply_model_one(training_input, testing_input, training_output, testing_output, keys):
-    """Random Forest"""
-    rf_classifier = RandomForestClassifier(random_state=42)
-    rf_classifier.fit(training_input, training_output.values[:, 0])
-    predicted = rf_classifier.predict(testing_input)
-    evaluate(predicted, testing_output.values[:, 0])
-
-
-def apply_model_two(training_input, testing_input, training_output, testing_output, keys):
-    sgd_classifier = OneVsRestClassifier(SGDClassifier(random_state=42))
-    sgd_classifier.fit(training_input, training_output.values[:, 0])
-    predicted = sgd_classifier.predict(testing_input)
-    evaluate(predicted, testing_output.values[:, 0])
-
-
-def evaluate(predicted, actual):
-    print("Accuracy: {}".format(accuracy_score(actual, predicted)))
-    print(classification_report(actual, predicted))
-    conf_matrix = confusion_matrix(actual, predicted)
-    print(conf_matrix)
-    plt.matshow(conf_matrix, cmap=plt.cm.gray)
-
-
 def plot_2d_pca(training_input, training_output, output_keys):
     pca = PCA(n_components=2)
     principal_components = pca.fit_transform(training_input)
@@ -203,6 +172,119 @@ def plot_explained_variance(training_input):
     plt.savefig("explainedvariance.png")
 
 
+def show_confusion_matrix(actual, predicted, model_used, output_keys, save=True):
+    conf_matrix = confusion_matrix(actual, predicted)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    cat = ax.matshow(conf_matrix, cmap=plt.cm.gray)
+    labels = [''] + [x for x in output_keys.values()]
+    ax.set_xticklabels(labels)
+    ax.set_yticklabels(labels)
+    ax.set_title("Confusion Matrix for {}".format(model_used))
+
+    if save:
+        plt.savefig("{}.png".format(model_used))
+
+    plt.show()
+
+
+def random_forest_random_search(pipeline, training_input, training_output):
+    # Number of trees in random forest
+    n_estimators = [int(x) for x in np.linspace(start=200, stop=2000, num=10)]
+    # Number of features to consider at every split
+    max_features = ['auto', 'sqrt']
+    # Maximum number of levels in tree
+    max_depth = [int(x) for x in np.linspace(10, 110, num=11)]
+    max_depth.append(None)
+    # Minimum number of samples required to split a node
+    min_samples_split = [2, 5, 10]
+    # Minimum number of samples required at each leaf node
+    min_samples_leaf = [1, 2, 4]
+    # Method of selecting samples for training each tree
+    bootstrap = [True, False]
+    # Create the random grid
+    random_grid = {'clf__n_estimators': n_estimators,
+                   'clf__max_features': max_features,
+                   'clf__max_depth': max_depth,
+                   'clf__min_samples_split': min_samples_split,
+                   'clf__min_samples_leaf': min_samples_leaf,
+                   'clf__bootstrap': bootstrap}
+
+    random = RandomizedSearchCV(estimator=pipeline, param_distributions=random_grid, n_iter=100, cv=3, verbose=2,
+                                random_state=42, n_jobs=-1)
+
+    print(pipeline.get_params())
+    random.fit(training_input, training_output)
+    print(random.best_params_)
+
+
+def random_forest_grid_search(pipeline, training_input, training_output):
+    # Best for binary:
+    # param_grid = {
+    #     'clf__bootstrap': [True],
+    #     'clf__max_depth': [2],
+    #     'clf__max_features': ["sqrt"],
+    #     'clf__min_samples_leaf': [1],
+    #     'clf__min_samples_split': [2],
+    #     'clf__n_estimators': [50]
+    # }
+    # Best for multiclass
+    param_grid = {
+        'clf__bootstrap': [True],
+        'clf__max_depth': [4],
+        'clf__max_features': ["sqrt"],
+        'clf__min_samples_leaf': [1],
+        'clf__min_samples_split': [2],
+        'clf__n_estimators': [700]
+    }
+
+    grid_search = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2)
+    grid_search.fit(training_input, training_output)
+    print(grid_search.best_params_)
+
+
+def apply_model_one(training_input, testing_input, training_output, testing_output, keys):
+    """Random Forest"""
+    pipeline = Pipeline([
+        ('scalar', MinMaxScaler()),
+        ('pca', PCA(n_components=0.95, random_state=42)),
+        ('clf', RandomForestClassifier(random_state=42, bootstrap=True, max_depth=4, max_features="sqrt",
+                                       min_samples_leaf=1, min_samples_split=2, n_estimators=700))
+    ])
+
+    # Find a good starting point for the best hyperparameters (commented out because it takes a while)
+    # random_forest_random_search(pipeline, training_input, training_output)
+    # Result for binary = {'clf__n_estimators': 400, 'clf__min_samples_split': 5, 'clf__min_samples_leaf': 1,
+    # 'clf__max_features': 'sqrt', 'clf__max_depth': 30, 'clf__bootstrap': True}
+    # Result for multiclass = {'clf__n_estimators': 1000, 'clf__min_samples_split': 2, 'clf__min_samples_leaf': 1,
+    # 'clf__max_features': 'sqrt', 'clf__max_depth': 20, 'clf__bootstrap': True}
+    # These values were then used as a starting point for the grid search
+    # random_forest_grid_search(pipeline, training_input, training_output)
+
+    # training_predicted = cross_val_predict(pipeline, training_input, training_output, cv=10)
+    # show_confusion_matrix(training_output, training_predicted, "Random Forest", keys, save=True)
+
+    pipeline.fit(training_input, training_output)
+    predicted = pipeline.predict(testing_input)
+    show_confusion_matrix(testing_output, predicted, "Random Forest", keys, True)
+
+
+def apply_model_two(training_input, testing_input, training_output, testing_output, keys):
+    """OVA SGD"""
+    pipeline = Pipeline([
+        ('scalar', MinMaxScaler()),
+        ('pca', PCA(n_components=0.95, random_state=42)),
+        ('clf', OneVsRestClassifier(SGDClassifier(random_state=42, max_iter=1000)))
+    ])
+
+    training_predicted = cross_val_predict(pipeline, training_input, training_output, cv=10)
+    show_confusion_matrix(training_output, training_predicted, "SGD", keys)
+
+    pipeline.fit(training_input, training_output)
+    predicted = pipeline.predict(testing_input)
+    # show_confusion_matrix(testing_output, predicted)
+
+
 if __name__ == "__main__":
     # Loading Data
     args = parse_args()
@@ -226,18 +308,5 @@ if __name__ == "__main__":
     # PCA Examples
     # plot_2d_pca(x_train, y_train, keys)
     # plot_explained_variance(x_train)
-
-    pipeline = Pipeline([
-        ('scalar', MinMaxScaler()),
-        ('pca', PCA(n_components=0.95, random_state=42)),
-        ('clf', RandomForestClassifier(random_state=42))
-    ])
-
-    pipeline.fit(x_train, y_train)
-    predicted = pipeline.predict(x_test)
-    print("Accuracy: {}".format(accuracy_score(y_test, predicted)))
-    print(classification_report(y_test, predicted))
-    conf_matrix = confusion_matrix(y_test, predicted)
-    print(conf_matrix)
-    plt.matshow(conf_matrix, cmap=plt.cm.gray)
-
+    apply_model_one(x_train, x_test, y_train, y_test, keys)
+    apply_model_two(x_train, x_test, y_train, y_test, keys)
