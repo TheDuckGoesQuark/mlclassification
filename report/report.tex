@@ -222,7 +222,7 @@ Another possible solution that could reduce the number of classifiers needed as 
 
 The ability to provide online learning (or at least batch learning) would also be useful, as user feedback could provide a method for crowdsourcing samples for further supervised learning. Crowdsourced data collection for producing data for supervised learning has famously been applied by projects such as reCAPTCHA \cite{captcha}, and a similiar method could be used by RadarCat to improve its error rate.
 
-With the previous information in mind (and for the sake of evaluation and comparison), an inherently multiclass method (Random Forest) and a one-vs-all method (Stochastic Gradient Descent) were chosen for the first and second models respectively. 
+With the previous information in mind (and for the sake of evaluation and comparison), an inherently multiclass method (Random Forest) and a one-vs-one method (Stochastic Gradient Descent) were chosen for the first and second models respectively. 
 
 \subsection{Random Forest Classifier}
 
@@ -267,52 +267,71 @@ The benefits of the hyper parameter tuning can be seen in figure \ref{fig:before
 
 \subsection{Stochastic Gradient Descent Classifier}
 
-One-vs-all was implemented using the Stochastic Gradient Descent Classifier (SGDClassifier). It supports online and batch learning and it considers one point at a time rather than the entire dataset when learning.
+One-vs-one was implemented using the Stochastic Gradient Descent Classifier (SGDClassifier). It supports online and batch learning and it considers one point at a time rather than the entire dataset when learning.
 
 SGD generally works by selecting a random sample at each step, and computing the gradient using that sample in order to minimize a cost function. Due to this randomness, SGD does not suffer from the local minimum problem to the same degree as batch gradient descent. The learning rate determines how quickly the step size decreases, and can determine how close to the minimum the algorithm can get. \cite{sgd} describe SGD as having two phases: a drift phase and a diffusion phase. The former is where the algorithm explores a large portion of the solution space, then as it converges upon a minimum it enters the far more chaotic diffusion phase. 
 
 The SGD has several hyperparameters that can be configured. 
 
+\begin{figure}[!ht]
+\centering
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/beforesgd}
+	\caption{Before}
+  \label{fig:beforesgd}
+\end{subfigure}%
+\begin{subfigure}{.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth]{images/aftersgd}
+  \caption{After}
+  \label{fig:aftersgd}
+\end{subfigure}
+\caption{Confusion matrices produced by 10-fold cross validation before and after hyperparameter tuning.}
+\label{fig:beforeandaftersgd}
+\end{figure}
+
+
 \section{Evaluation and Comparison}
 
 \subsection{Binary}
 
-\begin{figure}[!ht]
-\centering
-\begin{subfigure}{.5\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{images/btestrf}
-	\caption{Before}
-  \label{fig:brf}
-\end{subfigure}%
-\begin{subfigure}{.5\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{images/btestsgd}
-  \caption{After}
-  \label{fig:bsgd}
-\end{subfigure}
-\caption{Confusion matrices produced by 10-fold cross validation before and after hyperparameter tuning.}
-\label{fig:testbinary}
-\end{figure}
-
-\subsection{Multiclass}
-\begin{figure}[!ht]
-\centering
-\begin{subfigure}{.5\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{images/mctestrf}
-	\caption{Before}
-  \label{fig:mcrf}
-\end{subfigure}%
-\begin{subfigure}{.5\textwidth}
-  \centering
-  \includegraphics[width=\linewidth]{images/mctestsgd}
-  \caption{After}
-  \label{fig:mcsgd}
-\end{subfigure}
-\caption{Confusion matrices produced by 10-fold cross validation before and after hyperparameter tuning.}
-\label{fig:testmulticlass}
-\end{figure}
+%\begin{figure}[!ht]
+%\centering
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{images/btestrf}
+%	\caption{Before}
+%  \label{fig:brf}
+%\end{subfigure}%
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{images/btestsgd}
+%  \caption{After}
+%  \label{fig:bsgd}
+%\end{subfigure}
+%\caption{Confusion matrices produced by 10-fold cross validation before and after hyperparameter tuning.}
+%\label{fig:testbinary}
+%\end{figure}
+%
+%\subsection{Multiclass}
+%\begin{figure}[!ht]
+%\centering
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{images/mctestrf}
+%	\caption{Before}
+%  \label{fig:mcrf}
+%\end{subfigure}%
+%\begin{subfigure}{.5\textwidth}
+%  \centering
+%  \includegraphics[width=\linewidth]{images/mctestsgd}
+%  \caption{After}
+%  \label{fig:mcsgd}
+%\end{subfigure}
+%\caption{Confusion matrices produced by 10-fold cross validation before and after hyperparameter tuning.}
+%\label{fig:testmulticlass}
+%\end{figure}
 
 \section{Discussion}
 

@@ -269,16 +269,55 @@ def apply_model_one(training_input, testing_input, training_output, testing_outp
     show_confusion_matrix(testing_output, predicted, "Random Forest", keys, True)
 
 
+def sgd_random_search(pipeline, training_input, training_output):
+    # Learning rate
+    alpha = [1e-4, 1e-3, 1e-2, 1e-1, 1e0, 1e1, 1e2, 1e3]
+    # Loss method
+    loss = ['log', 'hinge', 'modified_huber', 'squared_hinge', 'perceptron']
+    # regulizer which determines how complexity is favoured over precision
+    penalty = [None, "l2", "l1", "elasticnet"]
+
+    # Create the random grid
+    random_grid = {'clf__estimator__alpha': alpha,
+                   'clf__estimator__loss': loss,
+                   'clf__estimator__penalty': penalty,
+                   }
+
+    random = RandomizedSearchCV(estimator=pipeline, param_distributions=random_grid, n_iter=100, cv=3, verbose=2,
+                                random_state=42, n_jobs=-1)
+
+    print(pipeline.get_params())
+    random.fit(training_input, training_output)
+    print(random.best_params_)
+
+
+def sgd_grid_search(pipeline, training_input, training_output):
+    # Create the random grid
+    param_grid = {'clf__estimator__alpha': [1e-3, 1e-4, 1e-5],
+                  'clf__estimator__loss': ["hinge"],
+                  'clf__estimator__penalty': ["l2"],
+                  }
+
+    grid_search = GridSearchCV(estimator=pipeline, param_grid=param_grid, cv=3, n_jobs=-1, verbose=2)
+    grid_search.fit(training_input, training_output)
+    print(grid_search.best_params_)
+
+
 def apply_model_two(training_input, testing_input, training_output, testing_output, keys):
     """OVA SGD"""
     pipeline = Pipeline([
         ('scalar', MinMaxScaler()),
         ('pca', PCA(n_components=0.95, random_state=42)),
-        ('clf', OneVsRestClassifier(SGDClassifier(random_state=42, max_iter=1000)))
+        ('clf', OneVsOneClassifier(
+            SGDClassifier(random_state=42, max_iter=3000, tol=1e-3, alpha=1e-4, loss="hinge", penalty="l2")))
     ])
 
-    training_predicted = cross_val_predict(pipeline, training_input, training_output, cv=10)
-    show_confusion_matrix(training_output, training_predicted, "SGD", keys)
+    # Find a good starting point for the best hyperparameters (commented out because it takes a while)
+    # sgd_random_search(pipeline, training_input, training_output)
+    # sgd_grid_search(pipeline, training_input, training_output)
+
+    # training_predicted = cross_val_predict(pipeline, training_input, training_output, cv=10)
+    # show_confusion_matrix(training_output, training_predicted, "SGD", keys)
 
     pipeline.fit(training_input, training_output)
     predicted = pipeline.predict(testing_input)
@@ -308,5 +347,9 @@ if __name__ == "__main__":
     # PCA Examples
     # plot_2d_pca(x_train, y_train, keys)
     # plot_explained_variance(x_train)
-    apply_model_one(x_train, x_test, y_train, y_test, keys)
+    # apply_model_one(x_train, x_test, y_train, y_test, keys)
     apply_model_two(x_train, x_test, y_train, y_test, keys)
+
+    # Explain parameters of SGD
+    # Compare the two
+    # FAWKIN SUBMIT YAS
