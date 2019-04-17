@@ -1,26 +1,24 @@
+import json
+from argparse import ArgumentParser
 from typing import Dict
 
-import pandas as pd
-import json
-import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
+import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
-from sklearn.metrics import roc_curve, confusion_matrix, accuracy_score, classification_report, precision_recall_curve
-from sklearn.model_selection import train_test_split, cross_val_predict, cross_val_score, GridSearchCV, \
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split, GridSearchCV, \
     RandomizedSearchCV
-
-from argparse import ArgumentParser
-
-from sklearn.multiclass import OneVsRestClassifier, OneVsOneClassifier
+from sklearn.multiclass import OneVsOneClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
 INPUTS_ARG = "inputs"
 OUTPUTS_ARG = "outputs"
 KEYS_ARG = "keys"
+TO_CLASSIFY_ARG = "classify"
 
 
 def parse_args() -> Dict:
@@ -28,13 +26,14 @@ def parse_args() -> Dict:
     ap.add_argument("-x", "--" + INPUTS_ARG, required=True, help="Path to csv file containing inputs")
     ap.add_argument("-y", "--" + OUTPUTS_ARG, required=True, help="Path to csv file containing outputs")
     ap.add_argument("-k", "--" + KEYS_ARG, required=True, help="Path to JSON file mapping outputs to class names")
+    ap.add_argument("-c", "--" + TO_CLASSIFY_ARG, required=True, help="Path to of inputs needing classified")
 
     parsed_args = ap.parse_args()
 
     return vars(parsed_args)
 
 
-def load_data(input_file, output_file, keys_file):
+def load_data(input_file, output_file, keys_file, to_classify_file):
     """Load input, output, and class titles from the given file names"""
     # Read in input data
     input_data = pd.read_csv(input_file, delimiter=',', error_bad_lines=True, dtype=float, header=None)
@@ -48,7 +47,10 @@ def load_data(input_file, output_file, keys_file):
 
     class_keys = {int(key): value for key, value in class_keys.items()}
 
-    return input_data, output_data, class_keys
+    # Read in to classify file
+    to_classify = pd.read_csv(to_classify_file, delimiter=',', error_bad_lines=True, dtype=float, header=None)
+
+    return input_data, output_data, class_keys, to_classify
 
 
 def split_data(input_df, output_df):
@@ -243,7 +245,7 @@ def random_forest_grid_search(pipeline, training_input, training_output):
     print(grid_search.best_params_)
 
 
-def apply_model_one(training_input, testing_input, training_output, testing_output, keys):
+def generate_random_forest(training_input, testing_input, training_output, testing_output, keys):
     """Random Forest"""
     pipeline = Pipeline([
         ('scalar', MinMaxScaler()),
@@ -265,8 +267,10 @@ def apply_model_one(training_input, testing_input, training_output, testing_outp
     # show_confusion_matrix(training_output, training_predicted, "Random Forest", keys, save=True)
 
     pipeline.fit(training_input, training_output)
-    predicted = pipeline.predict(testing_input)
-    show_confusion_matrix(testing_output, predicted, "Random Forest", keys, True)
+    train_predictions = pipeline.predict(testing_input)
+    show_confusion_matrix(testing_output, train_predictions, "Random Forest", keys, True)
+
+    return pipeline
 
 
 def sgd_random_search(pipeline, training_input, training_output):
@@ -303,7 +307,7 @@ def sgd_grid_search(pipeline, training_input, training_output):
     print(grid_search.best_params_)
 
 
-def apply_model_two(training_input, testing_input, training_output, testing_output, keys):
+def generate_sgd(training_input, testing_input, training_output, testing_output, keys):
     """OVA SGD"""
     pipeline = Pipeline([
         ('scalar', MinMaxScaler()),
@@ -321,13 +325,16 @@ def apply_model_two(training_input, testing_input, training_output, testing_outp
 
     pipeline.fit(training_input, training_output)
     predicted = pipeline.predict(testing_input)
-    # show_confusion_matrix(testing_output, predicted)
+    show_confusion_matrix(testing_output, predicted, "OVO SGDClassifier", keys, True)
+
+    return pipeline
 
 
 if __name__ == "__main__":
     # Loading Data
     args = parse_args()
-    inputs, outputs, keys = load_data(args[INPUTS_ARG], args[OUTPUTS_ARG], args[KEYS_ARG])
+    inputs, outputs, keys, to_classify = load_data(args[INPUTS_ARG], args[OUTPUTS_ARG], args[KEYS_ARG],
+                                                   args[TO_CLASSIFY_ARG])
     # Cleaning and preparing data
     inputs, outputs = clean_data(inputs, outputs)
     x_train, x_test, y_train, y_test = split_data(inputs, outputs)
@@ -347,9 +354,10 @@ if __name__ == "__main__":
     # PCA Examples
     # plot_2d_pca(x_train, y_train, keys)
     # plot_explained_variance(x_train)
-    # apply_model_one(x_train, x_test, y_train, y_test, keys)
-    apply_model_two(x_train, x_test, y_train, y_test, keys)
+    rf_pipeline = generate_random_forest(x_train, x_test, y_train, y_test, keys)
+    sgd_pipeline = generate_sgd(x_train, x_test, y_train, y_test, keys)
 
-    # Explain parameters of SGD
-    # Compare the two
-    # FAWKIN SUBMIT YAS
+
+
+# NOTE FOR MARKER : Some lines are commented out since they take a while,
+# or were used for experimenting but are all functional if uncommented
